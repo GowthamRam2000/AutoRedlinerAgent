@@ -1,0 +1,9 @@
+{
+  "note": "Rename this file to 'original.json' and keep it OUT of git. This is a placeholder for any private/local JSON you use during development.",
+  "example_fields": {
+    "aws_account_id": "123456789012",
+    "uploads_bucket": "redliner-uploads-<account>-<region>",
+    "api_base_url": "https://xxxxx.execute-api.us-east-1.amazonaws.com/prod"
+  }
+}
+

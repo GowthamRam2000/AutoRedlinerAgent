@@ -71,9 +71,22 @@
         </aside>
 
         <section class="viewer">
+          <div class="viewer-toolbar">
+            <div class="group">
+              <button @click="zoomOut">−</button>
+              <span class="label">{{ Math.round(scaleUsed * 100) }}%</span>
+              <button @click="zoomIn">+</button>
+              <button @click="zoomReset">Reset</button>
+            </div>
+            <div class="group">
+              <button @click="toggleFit">{{ scaleMode === 'fit' ? 'Actual size' : 'Fit width' }}</button>
+            </div>
+          </div>
           <div v-if="!pdfBuffer && !file" class="placeholder">Choose a PDF to preview. DOCX uploads analyze without preview.</div>
           <div v-if="file && !pdfBuffer && isDocx" class="placeholder">DOCX selected — no PDF preview, still fine to analyze.</div>
-          <div id="pdf-container" class="fade-in"></div>
+          <div id="viewer-viewport">
+            <div id="pdf-container" class="fade-in"></div>
+          </div>
         </section>
       </section>
     </div>

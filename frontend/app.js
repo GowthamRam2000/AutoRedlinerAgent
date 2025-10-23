@@ -17,6 +17,7 @@
     setup() {
       const file = ref(null);
       const pdfBuffer = ref(null);
+      let pdfDocVar = null;
       const message = ref("");
       const issues = ref([]);
       const summary = ref("");
@@ -24,6 +25,10 @@
       const loading = ref(false);
       const apiBase = ref(window.APP_CONFIG?.API_BASE_URL || "");
       const isDocx = ref(false);
+      // Zoom / scale state
+      const scaleMode = ref('fit'); // 'fit' or 'fixed'
+      const scale = ref(1.0);       // used when scaleMode === 'fixed'
+      const scaleUsed = ref(1.0);   // last effective scale used during render
 
       function onFileChange(e) {
         const f = e.target.files?.[0];
@@ -32,15 +37,23 @@
         message.value = "";
         summary.value = "";
         isDocx.value = false;
-        if (f && f.type === "application/pdf") {
+        if (f && (f.type === "application/pdf" || f.name?.toLowerCase().endsWith('.pdf'))) {
           const r = new FileReader();
-          r.onload = () => {
-            pdfBuffer.value = r.result;
-            renderPDF(r.result);
+          r.onload = async () => {
+            try {
+              const data = new Uint8Array(r.result);
+              pdfBuffer.value = data;
+              pdfDocVar = await window.pdfjsLib.getDocument({ data }).promise;
+              await renderPDF();
+            } catch (err) {
+              console.error(err);
+              message.value = `Failed to load PDF: ${err}`;
+            }
           };
           r.readAsArrayBuffer(f);
         } else {
           pdfBuffer.value = null;
+          pdfDocVar = null;
           document.getElementById("pdf-container").innerHTML = "";
           if (f && f.name?.toLowerCase().endsWith('.docx')) {
             isDocx.value = true;
@@ -104,36 +117,72 @@
         }
       }
 
-      async function renderPDF(arrayBuffer) {
-        if (!window.pdfjsLib) {
+      let renderSeq = 0;
+      async function renderPDF() {
+        if (!window.pdfjsLib || !pdfDocVar) {
           console.warn("PDF.js missing; cannot render PDF preview.");
           return;
         }
         const container = document.getElementById("pdf-container");
+        const viewportEl = document.getElementById("viewer-viewport") || container.parentElement || document.body;
         container.innerHTML = "";
-        const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const mySeq = ++renderSeq;
+        const pdf = pdfDocVar;
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          if (mySeq !== renderSeq) return;
           const page = await pdf.getPage(pageNum);
-          const viewport = page.getViewport({ scale: 1.3 });
+          // Determine scale: fit-to-width or fixed
+          const baseVp = page.getViewport({ scale: 1 });
+          let s = scale.value;
+          if (scaleMode.value === 'fit') {
+            const vw = viewportEl.clientWidth || window.innerWidth;
+            const maxWidth = Math.max(360, Math.min(1200, vw - 48));
+            s = Math.max(0.6, Math.min(2.5, maxWidth / baseVp.width));
+          }
+          const viewport = page.getViewport({ scale: s });
+          if (pageNum === 1) {
+            scaleUsed.value = s;
+          }
+          const cssFudge = 2; // ensure no visual cropping on the right edge
+          const cssW = Math.ceil(viewport.width) + cssFudge;
+          const cssH = Math.ceil(viewport.height) + cssFudge;
+
           const pageDiv = document.createElement("div");
           pageDiv.className = "page";
-          pageDiv.style.width = `${viewport.width}px`;
-          pageDiv.style.height = `${viewport.height}px`;
+          pageDiv.style.width = `${cssW}px`;
+          pageDiv.style.height = `${cssH}px`;
           pageDiv.id = `page-${pageNum}`;
 
           const canvas = document.createElement("canvas");
           const ctx = canvas.getContext("2d");
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
+          // Ensure crisp rendering and avoid clipping on HiDPI screens
+          const outputScale = window.devicePixelRatio || 1;
+          const pixelW = Math.ceil(viewport.width * outputScale) + cssFudge * outputScale;
+          const pixelH = Math.ceil(viewport.height * outputScale) + cssFudge * outputScale;
+          canvas.width = pixelW;
+          canvas.height = pixelH;
+          canvas.style.width = `${cssW}px`;
+          canvas.style.height = `${cssH}px`;
           pageDiv.appendChild(canvas);
 
           const textLayerDiv = document.createElement("div");
           textLayerDiv.className = "textLayer";
+          // PDF.js v3 requires the CSS variable --scale-factor to equal viewport.scale
+          // Set it on both the page container and the textLayer to satisfy checks.
+          pageDiv.style.setProperty("--scale-factor", String(viewport.scale));
+          textLayerDiv.style.setProperty("--scale-factor", String(viewport.scale));
+          container.style.setProperty("--scale-factor", String(viewport.scale));
+          // Ensure textLayer gets correct dimensions
+          textLayerDiv.style.width = `${cssW}px`;
+          textLayerDiv.style.height = `${cssH}px`;
           pageDiv.appendChild(textLayerDiv);
 
           container.appendChild(pageDiv);
 
-          await page.render({ canvasContext: ctx, viewport }).promise;
+          const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+          const task = page.render({ canvasContext: ctx, viewport, transform });
+          await task.promise;
+          if (mySeq !== renderSeq) return;
           try {
             const textContent = await page.getTextContent();
             if (window.pdfjsLib.renderTextLayer) {
@@ -156,6 +205,32 @@
             console.warn("Text layer render failed", e);
           }
         }
+        // Re-apply highlights after re-render
+        if (issues.value && issues.value.length) {
+          try { highlightIssues(issues.value); } catch (e) { /* ignore */ }
+        }
+      }
+
+      function rerender() { if (pdfDocVar) renderPDF(); }
+
+      function zoomIn() {
+        scaleMode.value = 'fixed';
+        scale.value = Math.min(2.5, (scale.value || 1.0) + 0.1);
+        rerender();
+      }
+      function zoomOut() {
+        scaleMode.value = 'fixed';
+        scale.value = Math.max(0.5, (scale.value || 1.0) - 0.1);
+        rerender();
+      }
+      function zoomReset() {
+        scaleMode.value = 'fixed';
+        scale.value = 1.0;
+        rerender();
+      }
+      function toggleFit() {
+        scaleMode.value = (scaleMode.value === 'fit') ? 'fixed' : 'fit';
+        rerender();
       }
 
       function normalizeWs(s) { return (s || "").replace(/\s+/g, " ").trim(); }
@@ -211,7 +286,11 @@
         window.open('https://github.com/', '_blank');
       }
 
-      return { file, pdfBuffer, message, issues, summary, limits, loading, isDocx, onFileChange, analyze, scrollToPage, openGithub };
+      window.addEventListener('resize', () => {
+        if (scaleMode.value === 'fit') rerender();
+      });
+
+      return { file, pdfBuffer, message, issues, summary, limits, loading, isDocx, onFileChange, analyze, scrollToPage, openGithub, zoomIn, zoomOut, zoomReset, toggleFit, scaleMode, scaleUsed };
     }
   };
 

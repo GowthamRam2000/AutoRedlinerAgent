@@ -3,6 +3,11 @@
 .idea/
 .vscode/
 *.iml
+Thumbs.db
+*.swp
+*.swo
+.python-version
+.tool-versions
 
 # Python
 __pycache__/
@@ -11,6 +16,8 @@ __pycache__/
 .mypy_cache/
 .venv/
 .pack-venv/
+ENV/
+venv/
 
 # Build and archives
 build/
@@ -26,9 +33,53 @@ node_modules/
 .env
 .env.*
 *.local
+.envrc
+.npmrc
+.pypirc
+pip.conf
+id_rsa
+id_rsa.*
+id_dsa
+id_ecdsa
+id_ed25519
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+*.der
+.aws/
+secrets/
+.secrets
+secrets.*
 
 # Docker
 *.log
+logs/
+docker-compose.override.yml
 
 # Project-specific: avoid committing account-specific service config
 backend-service.json
+original.json
+**/original.json
+
+# Cloud/IaC artifacts
+.aws-sam/
+.serverless/
+cdk.out/
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+
+# Test and coverage
+.coverage
+coverage/
+coverage.xml
+htmlcov/
+junit.xml
+
+# Databases and caches
+*.sqlite
+*.sqlite3
+*.db
