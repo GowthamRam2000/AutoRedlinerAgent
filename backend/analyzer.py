@@ -41,9 +41,7 @@ def build_prompt(full_text: str) -> str:
 
 
 def parse_llm_json(text: str) -> Dict:
-    # Try to extract JSON block
     s = text.strip()
-    # If model added extra text, attempt to find first { ... }
     start = s.find("{")
     end = s.rfind("}")
     if start != -1 and end != -1 and end > start:
@@ -54,7 +52,6 @@ def parse_llm_json(text: str) -> Dict:
             data = {"issues": data if isinstance(data, list) else [], "summary": ""}
         return data
     except Exception:
-        # last resort minimal structure
         return {"issues": [], "summary": s}
 
 
@@ -78,7 +75,6 @@ def analyze_with_bedrock(model_id: str, pages: List[str]) -> Dict:
     combined = "\n\n".join([f"[Page {i+1}]\n{t}" for i, t in enumerate(pages)])
     prompt = build_prompt(combined)
 
-    # Agentic tool: policy_library (Indian contract norms)
     tools = [
         {
             "toolSpec": {
@@ -150,7 +146,6 @@ def analyze_with_bedrock(model_id: str, pages: List[str]) -> Dict:
         tips = norms.get(category, norms["general"])
         return "Policy library (India) for category='{}':\n- " .format(category) + "\n- ".join(tips)
 
-    # Encourage tool usage via instruction prefix
     tool_instruction = (
         "You have access to a tool named policy_library(category, jurisdiction='India'). "
         "Call it when forming the risk analysis to ground recommendations. "
@@ -163,14 +158,6 @@ def analyze_with_bedrock(model_id: str, pages: List[str]) -> Dict:
 
 
 def analyze_with_bedrock_agent(agent_id: str, agent_alias_id: str, pages: List[str]) -> Dict:
-    """Invoke a Bedrock Agent (no external KB) with instructions to use offline tools.
-
-    The Agent should be configured with Action Group functions matching:
-      - policy_library(category: string, jurisdiction: "India") -> text tips
-      - severity_rules(clause: string, category: string) -> suggested severity
-      - redline_templates(clause: string, category: string) -> template edits
-    and instructed to return STRICT JSON per SCHEMA_GUIDE.
-    """
     combined = "\n\n".join([f"[Page {i+1}]\n{t}" for i, t in enumerate(pages)])
     base_instructions = (
         "You are a contracts attorney specializing in Indian contract law. "

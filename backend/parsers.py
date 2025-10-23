@@ -27,7 +27,6 @@ def parse_pdf(path: str, max_pages: int = 20) -> Tuple[List[str], int]:
 
 
 def parse_docx(path: str, max_pages: int = 20) -> Tuple[List[str], int]:
-    # DOCX has no real page concept; we return a single logical "page"
     doc = Document(path)
     texts = []
     for p in doc.paragraphs:
@@ -35,7 +34,6 @@ def parse_docx(path: str, max_pages: int = 20) -> Tuple[List[str], int]:
         if txt:
             texts.append(txt)
     content = "\n".join(texts)
-    # Heuristic: split into pseudo-pages of ~1200 words to keep chunks small
     words = content.split()
     chunk_size = 1200
     pages = []

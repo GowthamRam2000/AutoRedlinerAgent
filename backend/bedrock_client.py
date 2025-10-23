@@ -30,7 +30,6 @@ def converse_json(model_id: str, prompt: str, max_tokens: int = 2500, temperatur
         )
         return resp["output"]["message"]["content"][0]["text"]
     except client.exceptions.ValidationException:
-        # Fallback to invoke_model with a generic schema if converse is not supported
         body = json.dumps({
             "inputText": prompt,
             "textGenerationConfig": {
@@ -41,7 +40,6 @@ def converse_json(model_id: str, prompt: str, max_tokens: int = 2500, temperatur
         })
         resp = client.invoke_model(modelId=model_id, body=body)
         payload = json.loads(resp.get("body").read()) if hasattr(resp.get("body"), "read") else json.loads(resp.get("body"))
-        # Try common fields
         return payload.get("results", [{}])[0].get("outputText") or payload.get("generated_text") or json.dumps(payload)
 
 
@@ -54,12 +52,6 @@ def converse_agentic(
     temperature: float = 0.2,
     max_rounds: int = 3,
 ) -> str:
-    """Runs Converse with tool specs, handling toolUse -> toolResult loops.
-
-    tools: list of tool specs following Bedrock Converse format:
-      {"toolSpec": {"name": str, "description": str, "inputSchema": {"json": {...}}}}
-    tool_runner: callable(name: str, input_json: dict) -> str (text to return to the model)
-    """
     client = get_bedrock_runtime()
     messages = [{"role": "user", "content": [{"text": user_text}]}]
     tool_config = {"tools": tools}
@@ -80,15 +72,11 @@ def converse_agentic(
         assistant_message = resp["output"]["message"]
         content = assistant_message.get("content", [])
 
-        # Append assistant turn to the running transcript before sending toolResults
         messages.append({"role": "assistant", "content": content})
-        # Collect text parts
         texts = [c.get("text") for c in content if "text" in c and c.get("text")]
-        # Collect tool uses
         tool_uses = [c.get("toolUse") for c in content if "toolUse" in c and c.get("toolUse")]
 
         if tool_uses:
-            # Prepare toolResult message combining all tool calls from this assistant turn
             result_contents = []
             for tu in tool_uses:
                 name = tu.get("name")
@@ -105,13 +93,10 @@ def converse_agentic(
                     }
                 })
             messages.append({"role": "user", "content": result_contents})
-            # Continue loop for model to use the results
             continue
 
         if texts:
             return "\n".join(texts)
-
-    # If we exhausted rounds without plain text, return best-effort serialization
     return json.dumps((last_resp or {}).get("output", {}))
 
 
@@ -122,12 +107,7 @@ def invoke_agent_text(
     session_id: Optional[str] = None,
     region: Optional[str] = None,
 ) -> str:
-    """Invoke an Amazon Bedrock Agent and return concatenated text output.
 
-    Notes:
-    - Uses streaming response; concatenates text chunks.
-    - Falls back to best-effort serialization if shape differs.
-    """
     client = get_bedrock_agent_runtime(region)
     sid = session_id or uuid.uuid4().hex
     resp = client.invoke_agent(
@@ -137,29 +117,22 @@ def invoke_agent_text(
         inputText=input_text,
     )
 
-    # Newer SDKs return an event stream under 'completion' or 'responseStream'.
-    # Collect any text fields we can find robustly.
     out = []
-    # The response is a botocore.eventstream.EventStream accessor at key 'completion'
     stream = resp.get("completion") or resp.get("responseStream")
     if stream is not None:
         for event in stream:
-            # event is a dict with one of: 'chunk', 'trace', 'returnControl', etc.
             chunk = event.get("chunk") or event.get("bytes") or event.get("completion")
             if chunk:
-                # Preferred: text field inside chunk
                 text = chunk.get("text") if isinstance(chunk, dict) else None
                 if text:
                     out.append(text)
                 else:
-                    # Fallback: raw bytes
                     b = chunk.get("bytes") if isinstance(chunk, dict) else None
                     if b:
                         try:
                             out.append(b.decode("utf-8", errors="ignore"))
                         except Exception:
                             pass
-    # Some SDKs may return a non-streaming message with an output/content shape
     if not out:
         msg = resp.get("output") or resp.get("response") or {}
         if isinstance(msg, dict):
@@ -168,7 +141,6 @@ def invoke_agent_text(
             if isinstance(content, list):
                 texts = [c.get("text") for c in content if isinstance(c, dict) and c.get("text")]
                 out.extend(texts)
-        # Last resort: serialize
         if not out:
             return json.dumps(resp)
     return "\n".join(out).strip()

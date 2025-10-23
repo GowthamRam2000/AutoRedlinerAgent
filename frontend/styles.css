@@ -14,14 +14,12 @@
 html, body { height: 100%; }
 body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; background: var(--bg); color: var(--text); }
 
-/* Header */
 header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--panel); position: sticky; top: 0; z-index: 10; }
 header h1 { margin: 0; font-size: 18px; }
 .brand { display: flex; align-items: center; gap: 12px; }
 .logo { width: 28px; height: 28px; }
 .subtitle { color: var(--muted); font-size: 13px; }
 
-/* Hero / Uploader */
 .hero { padding: 20px 24px; display: grid; place-items: center; background: var(--panel-ghost); border-bottom: 1px solid var(--border); }
 .uploader { display: grid; gap: 12px; max-width: 980px; width: 100%; }
 .file-drop { width: 100%; display: flex; gap: 12px; padding: 16px; border: 1px dashed var(--border); border-radius: 12px; background: var(--panel); align-items: center; transition: border-color .2s ease, transform .1s ease, box-shadow .2s ease; }
@@ -43,7 +41,6 @@ button:active { transform: translateY(1px); }
 .hint { color: var(--muted); font-size: 12px; }
 .message { margin-top: 8px; color: var(--muted); }
 
-/* Main Content */
 .content { display: grid; grid-template-columns: clamp(400px, 30vw, 560px) 1fr; gap: 16px; align-items: start; padding: 18px 24px; }
 .issues { padding: 16px; background: var(--panel); min-height: 60vh; max-height: calc(100vh - 200px); overflow: auto; border: 1px solid var(--border); border-radius: 14px; position: sticky; top: 18px; }
 .summary-card { border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 16px; background: #fafafa; }
@@ -70,7 +67,6 @@ button:active { transform: translateY(1px); }
 .viewer-toolbar .group button:hover { background: #f8fafc; }
 .viewer-toolbar .label { color: var(--muted); font-size: 12px; margin-left: 8px; min-width: 48px; text-align: center; }
 
-/* PDF Container */
 #viewer-viewport { width: 100%; display: flex; justify-content: center; }
 #pdf-container { display: flex; flex-direction: column; gap: 16px; align-items: center; --scale-factor: 1; }
 .page { background: white; color: black; margin: 0 auto; box-shadow: 0 2px 12px rgba(0,0,0,0.12); position: relative; border: 1px solid var(--border); box-sizing: content-box; overflow: visible; }

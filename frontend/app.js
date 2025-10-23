@@ -1,7 +1,6 @@
 (() => {
   const { createApp, ref, onMounted } = Vue;
 
-  // Configure PDF.js worker if available; fail gracefully if not.
   if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
     window.pdfjsLib.GlobalWorkerOptions.workerSrc =
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -104,8 +103,6 @@
           issues.value = res.issues || [];
           summary.value = res.summary || "";
           message.value = `Found ${issues.value.length} issues`;
-
-          // Highlight snippets if we have a PDF preview
           if (pdfBuffer.value && issues.value.length) {
             highlightIssues(issues.value);
           }
@@ -131,7 +128,6 @@
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
           if (mySeq !== renderSeq) return;
           const page = await pdf.getPage(pageNum);
-          // Determine scale: fit-to-width or fixed
           const baseVp = page.getViewport({ scale: 1 });
           let s = scale.value;
           if (scaleMode.value === 'fit') {
@@ -143,7 +139,7 @@
           if (pageNum === 1) {
             scaleUsed.value = s;
           }
-          const cssFudge = 2; // ensure no visual cropping on the right edge
+          const cssFudge = 2;
           const cssW = Math.ceil(viewport.width) + cssFudge;
           const cssH = Math.ceil(viewport.height) + cssFudge;
 
@@ -155,7 +151,6 @@
 
           const canvas = document.createElement("canvas");
           const ctx = canvas.getContext("2d");
-          // Ensure crisp rendering and avoid clipping on HiDPI screens
           const outputScale = window.devicePixelRatio || 1;
           const pixelW = Math.ceil(viewport.width * outputScale) + cssFudge * outputScale;
           const pixelH = Math.ceil(viewport.height * outputScale) + cssFudge * outputScale;
@@ -167,12 +162,9 @@
 
           const textLayerDiv = document.createElement("div");
           textLayerDiv.className = "textLayer";
-          // PDF.js v3 requires the CSS variable --scale-factor to equal viewport.scale
-          // Set it on both the page container and the textLayer to satisfy checks.
           pageDiv.style.setProperty("--scale-factor", String(viewport.scale));
           textLayerDiv.style.setProperty("--scale-factor", String(viewport.scale));
           container.style.setProperty("--scale-factor", String(viewport.scale));
-          // Ensure textLayer gets correct dimensions
           textLayerDiv.style.width = `${cssW}px`;
           textLayerDiv.style.height = `${cssH}px`;
           pageDiv.appendChild(textLayerDiv);
@@ -194,7 +186,6 @@
                 enhanceTextSelection: true,
               }).promise;
             } else {
-              // Minimal fallback: dump text spans (no positioning enhancements)
               textContent.items.forEach((item) => {
                 const span = document.createElement("span");
                 span.textContent = item.str + " ";
@@ -205,7 +196,6 @@
             console.warn("Text layer render failed", e);
           }
         }
-        // Re-apply highlights after re-render
         if (issues.value && issues.value.length) {
           try { highlightIssues(issues.value); } catch (e) { /* ignore */ }
         }
@@ -236,7 +226,6 @@
       function normalizeWs(s) { return (s || "").replace(/\s+/g, " ").trim(); }
 
       function highlightIssues(list) {
-        // Simple pass: try to find each exact_text_snippet within any single text span per page.
         list.forEach(issue => {
           (issue.page_numbers || []).forEach(p => {
             const layer = document.querySelector(`#page-${p} .textLayer`);
@@ -247,10 +236,8 @@
               const textNorm = normalizeWs(span.textContent);
               if (!textNorm) continue;
               if (textNorm.includes(needleNorm)) {
-                // Wrap the match
                 const idx = textNorm.indexOf(needleNorm);
                 const raw = span.textContent;
-                // Approximate mapping using original raw string (may differ slightly with whitespace)
                 const before = raw.slice(0, idx);
                 const match = raw.slice(idx, idx + issue.exact_text_snippet.length);
                 const after = raw.slice(idx + issue.exact_text_snippet.length);
@@ -263,7 +250,7 @@
                 span.appendChild(b);
                 span.appendChild(m);
                 span.appendChild(a);
-                break; // one highlight per issue per page (keep it simple)
+                break;
               }
             }
           });

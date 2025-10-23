@@ -88,7 +88,6 @@ def analyze(req: AnalyzeRequest):
         except Exception as e:
             raise HTTPException(status_code=404, detail=f"File not found: {e}")
 
-        # Enforce size limit
         size_mb = os.path.getsize(local_path) / (1024 * 1024)
         if size_mb > MAX_FILE_MB:
             raise HTTPException(status_code=400, detail=f"File too large: {size_mb:.1f} MB > {MAX_FILE_MB} MB")
@@ -103,13 +102,11 @@ def analyze(req: AnalyzeRequest):
     if not any(pages):
         raise HTTPException(status_code=400, detail="No extractable text found in document")
 
-    # Call Bedrock (Agent or direct) for analysis
     if USE_BEDROCK_AGENT and AGENT_ID and AGENT_ALIAS_ID:
         data = analyze_with_bedrock_agent(AGENT_ID, AGENT_ALIAS_ID, pages)
     else:
         data = analyze_with_bedrock(MODEL_ID, pages)
 
-    # Normalize and add page numbers based on exact_text_snippet
     issues_payload = []
     for idx, raw_issue in enumerate(data.get("issues", []), start=1):
         try:
@@ -128,7 +125,6 @@ def analyze(req: AnalyzeRequest):
             )
             issues_payload.append(issue)
         except Exception:
-            # Skip malformed issue
             continue
 
     result = AnalyzeResult(
