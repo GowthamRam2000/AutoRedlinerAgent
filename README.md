@@ -83,6 +83,13 @@ API Summary
 Disclaimers
 - This is a demo/educational tool; not legal advice.
 - Analysis limits (pages/size) are conservative to control cost.
+- Important: This is not legal advice.
+Think of it as a smoke detector, not a firefighter. It tells you when something might be burning, but you still need the professionals to actually put out the fire. Every contract that matters should ultimately be reviewed by a qualified lawyer. 
+Real-world scenarios where this helps:
+Startups evaluating multiple vendor agreements and need to prioritize which ones need immediate legal attention
+Small businesses that can't afford to send every contract to a lawyer but need to catch major problems
+Legal teams doing initial triage before dedicating senior attorney time
+Founders reviewing term sheets at 2 AM trying to figure out what questions to ask their lawyer in the morning
 
 License
 - MIT (see `LICENSE`).
