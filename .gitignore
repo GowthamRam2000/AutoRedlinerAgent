@@ -1,0 +1,34 @@
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.venv/
+.pack-venv/
+
+# Build and archives
+build/
+dist/
+*.egg-info/
+*.zip
+function.zip
+
+# Node / frontend
+node_modules/
+
+# Local env and credentials
+.env
+.env.*
+*.local
+
+# Docker
+*.log
+
+# Project-specific: avoid committing account-specific service config
+backend-service.json

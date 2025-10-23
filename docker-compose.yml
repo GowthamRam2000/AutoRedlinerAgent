@@ -1,0 +1,31 @@
+version: "3.9"
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: redliner-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-amazon.nova-lite-v1:0}
+      - UPLOADS_BUCKET=${UPLOADS_BUCKET}
+      - ALLOWED_ORIGINS=http://localhost:8080
+      - MAX_PAGES=${MAX_PAGES:-20}
+      - MAX_FILE_MB=${MAX_FILE_MB:-5}
+    volumes:
+      - ${HOME}/.aws:/root/.aws:ro
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: redliner-frontend
+    ports:
+      - "8080:80"
+    environment:
+      - API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+

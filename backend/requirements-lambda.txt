@@ -1,0 +1,10 @@
+fastapi==0.115.2
+mangum==0.17.0
+pypdf==4.3.1
+python-docx==1.1.2
+python-multipart==0.0.9
+orjson==3.10.7
+tenacity==9.0.0
+
+# Note: omit boto3 & uvicorn for Lambda to keep package small.
+# Lambda Python runtimes include boto3.

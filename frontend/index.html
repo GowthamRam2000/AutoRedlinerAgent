@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auto Redliner (India)</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://unpkg.com/vue@3.4.38/dist/vue.global.prod.js"></script>
+    <!-- Use PDF.js v3 UMD build for global pdfjsLib -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="config.js"></script>
+  </head>
+  <body>
+    <div id="app" :class="{ 'has-preview': !!pdfBuffer }">
+      <header>
+        <div class="brand">
+          <img src="favicon.svg" alt="logo" class="logo"/>
+          <div>
+            <h1>Auto Redliner (India)</h1>
+            <div class="subtitle">Upload NDA/contract and get issue highlights</div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="ghost" @click="openGithub">View Code</button>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="uploader">
+          <label class="file-drop" :class="{ loading }">
+            <input type="file" @change="onFileChange" accept="application/pdf,.pdf,.docx" hidden />
+            <div class="icon">📄</div>
+            <div class="text">
+              <div class="primary">Drop PDF/DOCX here or click to choose</div>
+              <div class="secondary">Small files only (<= {{ limits.maxFileMb }} MB)</div>
+            </div>
+          </label>
+          <div class="cta">
+            <button :disabled="!file || loading" @click="analyze">
+              <span v-if="!loading">Analyze</span>
+              <span v-else class="spinner"></span>
+            </button>
+            <div v-if="message" class="message">{{ message }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content">
+        <aside class="issues" v-if="issues.length">
+          <div class="summary-card fade-in">
+            <div class="count"><span class="badge">{{ issues.length }}</span> Issues Found</div>
+            <div class="sumtext" v-if="summary">{{ summary }}</div>
+          </div>
+          <div class="issue fade-in" v-for="(iss, i) in issues" :key="iss.issue_id" @click="scrollToPage(iss)">
+            <div class="head">
+              <span class="sev" :data-sev="iss.severity">{{ iss.severity }}</span>
+              <strong class="cat">{{ iss.category }}</strong>
+            </div>
+            <div class="risk">{{ iss.risk_summary }}</div>
+            <div class="reco">
+              <span class="lbl">Recommendation:</span> {{ iss.recommendation }}
+            </div>
+            <details v-if="iss.redline_suggestion" class="redline">
+              <summary>Suggested Redline</summary>
+              <div>{{ iss.redline_suggestion }}</div>
+            </details>
+            <div class="pages" v-if="iss.page_numbers?.length">Pages: {{ iss.page_numbers.join(', ') }}</div>
+          </div>
+        </aside>
+
+        <section class="viewer">
+          <div v-if="!pdfBuffer && !file" class="placeholder">Choose a PDF to preview. DOCX uploads analyze without preview.</div>
+          <div v-if="file && !pdfBuffer && isDocx" class="placeholder">DOCX selected — no PDF preview, still fine to analyze.</div>
+          <div id="pdf-container" class="fade-in"></div>
+        </section>
+      </section>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+  </html>
